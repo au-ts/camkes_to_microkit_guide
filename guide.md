@@ -995,6 +995,6 @@ Note that some of these features have already been implemented and are currently
 [VMM]: https://github.com/au-ts/sel4cp_vmm
 [seL4CP VMM manual]: https://github.com/au-ts/sel4cp_vmm/blob/main/docs/MANUAL.md
 [camkes VMM docs sort of]: https://docs.sel4.systems/Tutorials/camkes-vm-linux.html
-[the truth]: https://github.com/sel4/camkes-vm/components/VM_Arm/configurations/vm.h
+[the truth]: https://github.com/seL4/camkes-vm/blob/master/components/VM_Arm/configurations/vm.h
 [entry point]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#entry-points
 [libsel4cp]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#libsel4cp-libsel4cp
