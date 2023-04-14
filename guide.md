@@ -173,7 +173,7 @@ Unlike CAmkES components, it is mandatory to specify the priority of the *PD*. Y
 </protection_domain>
 ```
 
-*`budget`* and *`period`* are thread attributes for the scheduler of the MCS kernel. On CAmkES, you should be able to configure them as attributes (see [thread attributes](#thread_attr)).
+*`budget`* and *`period`* are [thread attributes][scheduling] for the scheduler of the MCS kernel. On CAmkES, you should be able to configure them as attributes (see [thread attributes](#thread_attr)).
 
 *`passive`* means this is an event-driven *protection domain*, that has no continuously running thread of its own. After it has initialised itself, its scheduling context is revoked, and it runs on the scheduling contexts of its invokers or a notification.
 
@@ -406,8 +406,6 @@ seL4CP doesn't have an abstraction for hardware. To allow a *PD* to access a par
     <protection_domain name="driver" priority="42">
         <map mr="device_mem" vaddr="0x30890000" perms="rw" cached="false"
             setvar_vaddr="device_base" />
-        <map mr="device_ioport" vaddr="0x308a0000" perms="rw" cached="false"
-            setvar_vaddr="device_ioport" />
 
         <irq irq="142" id="7" />
     </protection_domain>
@@ -998,3 +996,4 @@ Note that some of these features have already been implemented and are currently
 [the truth]: https://github.com/seL4/camkes-vm/blob/master/components/VM_Arm/configurations/vm.h
 [entry point]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#entry-points
 [libsel4cp]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#libsel4cp-libsel4cp
+[scheduling]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#scheduling
