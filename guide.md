@@ -962,8 +962,9 @@ The following is a (non-exhaustive) list of indented future additions to seL4CP:
 * Limited dynamic memory management.
     * There will still be a static amount of memory available, however there plans to allow for having a protection domain temporarily assign a memory region to its virtual address space. Note that there is still discussion to be had on this, the details are not finalised.
 * Multi-threaded protection domains.
+* Multi VCPU virtual machines.
 * Multi-core configurations.
-    * This will allow the use of the SMP kernel. For example you may want to pin certain PDs to certain CPU cores.
+    * This will allow the use of the SMP kernel. For example you may want to pin certain PDs or VMs to certain CPU cores.
 * Other architecture support such as x86 and RISC-V.
 * Virtualisation support.
     * As you can see from the examples in this guide, we have been experimenting with virtual machines on top of seL4CP. The changes necessary to do this are not yet mainlined, but should be in the near future.
