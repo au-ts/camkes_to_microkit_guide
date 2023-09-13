@@ -4,11 +4,11 @@
      SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
-# CAmkES to seL4CP Transition Guide
+# CAmkES to Microkit Transition Guide
 
 ## Introduction
 
-The goal of this document is to act as a guide for migrating applications built using CAmkES to [the seL4 Core Platform][seL4CP] (seL4CP). This is done by discussing the similarities and differences between the frameworks as well as providing various examples. A basic understanding of CAmkES and seL4CP might be needed before reading this documentation. Most of the examples in this guide are taken from the [CAmkES Tutorial][camkes tut] and the following example systems:
+The goal of this document is to act as a guide for migrating applications built using CAmkES to [Microkit][Microkit] (Microkit). This is done by discussing the similarities and differences between the frameworks as well as providing various examples. A basic understanding of CAmkES and Microkit might be needed before reading this documentation. Most of the examples in this guide are taken from the [CAmkES Tutorial][camkes tut] and the following example systems:
 
 - [seL4 Device Driver Framework (sDDF)][sDDF]
     * [similar CAmkES version][camkes sDDF] (no longer maintained)
@@ -16,9 +16,9 @@ The goal of this document is to act as a guide for migrating applications built 
 - [Linux virtual machines using VirtIO demo][VMM demo]
     * [similar CAmkES version][camkes VMM example]
 
-To avoid confusion between CAmkES and seL4CP, when referring to seL4CP terminologies, we always emphasize them with *italics*.
+To avoid confusion between CAmkES and Microkit, when referring to Microkit terminologies, we always emphasize them with *italics*.
 
-CAmkES and seL4CP are both designed for building systems with a static architecture (while seL4CP aims to have limited dynamicism). In general, CAmkES is a higher-level tool than seL4CP, it provides:
+CAmkES and Microkit are both designed for building systems with a static architecture (while Microkit aims to have limited dynamicism). In general, CAmkES is a higher-level tool than Microkit, it provides:
 
 * a language to describe component interfaces, components, and the whole systems
 * a collection of reusable CAmkES components and interfaces
@@ -26,19 +26,19 @@ CAmkES and seL4CP are both designed for building systems with a static architect
 * templates and a code generator to combine programmer-provided component code with generated scaffolding and glue code to build a system image
 * runtime libraries ([`libsel4camkes`][libsel4camkes]) that provide various supports, including memory allocators, a subset of POSIX syscalls, inter-component transport mechanisms, interfaces for the CAmkES APIs etc...
 
-seL4CP is a minimal seL4 operating systems framework, it intentionally doesn't prescribe a boiled system but provides an SDK that is designed to integrate with a build system of your choice. It provides:
+Microkit is a minimal seL4 operating systems framework, it intentionally doesn't prescribe a boiled system but provides an SDK that is designed to integrate with a build system of your choice. It provides:
 
-* seL4CP tool that takes a programmer-provided system description as input and produces an appropriate system image
-* runtime libraries that provide the C runtime for the *protection domain*, along with interfaces for the sel4cp APIs
+* Microkit tool that takes a programmer-provided system description as input and produces an appropriate system image
+* runtime libraries that provide the C runtime for the *protection domain*, along with interfaces for the Microkit APIs
 
 And does not provide:
 
-* a build system. seL4CP allows (and forces) users to choose their own build systems
+* a build system. Microkit allows (and forces) users to choose their own build systems
 * runtime libraries/tools for specific supports
 
-Note that unlike CAmkES, seL4CP only supports the MCS kernel. This decision doesn't have significant impacts on migrating non-MCS-kernel-specific applications from CAmkES to seL4CP, as the scheduler of the MCS kernel can also handle round-robin threads.
+Note that unlike CAmkES, Microkit only supports the MCS kernel. This decision doesn't have significant impacts on migrating non-MCS-kernel-specific applications from CAmkES to Microkit, as the scheduler of the MCS kernel can also handle round-robin threads.
 
-This guide will demonstrate 1-to-1 mappings between CAmkES concepts and seL4CP concepts where they exist, as well as potential ways to implement similar systems on top of seL4CP where seL4CP does not provide a feature.
+This guide will demonstrate 1-to-1 mappings between CAmkES concepts and Microkit concepts where they exist, as well as potential ways to implement similar systems on top of Microkit where Microkit does not provide a feature.
 
 ## Overview
 
@@ -74,7 +74,7 @@ assembly {
 }
 ```
 
-A mostly equivalent seL4CP system of this CAmkES system may look like this:
+A mostly equivalent Microkit system of this CAmkES system may look like this:
 
 ```xml {#cp-overview}
 <?xml version="1.0" encoding="UTF-8"?>
@@ -111,7 +111,7 @@ A mostly equivalent seL4CP system of this CAmkES system may look like this:
 </system>
 ```
 
-At the system level, there is a roughly 1-to-1 match between `assembly`/`component` in CAmkES and *`system`*/*`protection domain`* (*PD*) on seL4CP, but the way CAmkES and seL4CP implement inter-component/*PD* communication and shared memory are different.
+At the system level, there is a roughly 1-to-1 match between `assembly`/`component` in CAmkES and *`system`*/*`protection domain`* (*PD*) on Microkit, but the way CAmkES and Microkit implement inter-component/*PD* communication and shared memory are different.
 
 ## Concepts
 
@@ -125,7 +125,7 @@ assembly {
 }
 ```
 
-and the seL4CP way of defining a system:
+and the Microkit way of defining a system:
 ```xml
 <system>
 <!-- also your stuff -->
@@ -149,11 +149,11 @@ assembly {
 ```
 A CAmkES component is typically multithreaded. The keyword `control` means it will contain a main function and have an active thread of control. Each `interface` (see [CAmkES Interfaces](#iface)) the component interacts with uses another thread within the component. A component that declares `control` will have an entry point `run`, which is provided by the component code.
 
-seL4CP *PDs* are single-threaded and event-driven to keep the programming model and implementations simple. A *PD* provides one single thread of control, which is responsible for receiving messages (i.e. seL4 system calls) from other *PDs* and invoking [`libsel4cp`][libsel4cp] [entry points][entry point]. A *PD* has three entry points: `init`, `notified` and, optionally, `protected`.
+Microkit *PDs* are single-threaded and event-driven to keep the programming model and implementations simple. A *PD* provides one single thread of control, which is responsible for receiving messages (i.e. seL4 system calls) from other *PDs* and invoking [`libmicrokit`][libmicrokit] [entry points][entry point]. A *PD* has three entry points: `init`, `notified` and, optionally, `protected`.
 
-`libsel4cp` is a library that provides the C runtime for the protection domain, along with interfaces for the sel4cp APIs, we will discuss some of the `libsel4cp` functions in [CAmkES Interfaces](#iface).
+`libmicrokit` is a library that provides the C runtime for the protection domain, along with interfaces for the Microkit APIs, we will discuss some of the `libmicrokit` functions in [CAmkES Interfaces](#iface).
 
-The seL4CP way of adding a *protection domain*:
+The Microkit way of adding a *protection domain*:
 ```xml
 <system>
     <protection_domain name="ping" priority="42">
@@ -198,7 +198,7 @@ component EthdriverARM {
 }
 ```
 
-seL4CP doesn't provide such a mechanism, the alternatives and current workaround is discussed in [Build](#build).
+Microkit doesn't provide such a mechanism, the alternatives and current workaround is discussed in [Build](#build).
 
 Thread attributes (e.g., priority, budget, period CPU affinity) are also considered a type of attribute in CAmkES:
 ```c {#thread_attr}
@@ -214,13 +214,13 @@ assembly {
     }
 }
 ```
-On seL4CP, thread attributes are part of the *PD* attributes (see [this example](#pd_config)).
+On Microkit, thread attributes are part of the *PD* attributes (see [this example](#pd_config)).
 
 ### `connectors`, `connections` and *`memory regions`*, *`channels`*
 
-CAmkES interfaces from different components are connected by CAmkES `connectors`. CAmkES provides various connectors for communication (e.g., `seL4VirtQueues`) and shared memory (e.g., `seL4RPCDataport`) for different purposes. There are also connectors for specific types of servers (e.g., `seL4Ethdriver`). Some connectors (e.g., `seL4VMDTBPassthrough`), are even used as ways to hack the build system. In contrast, seL4CP provides strictly minimum supports for memory mapping with *`memory regions`* and IPCs/notifications with *`channels`*. With seL4CP, it is up to you to implement the specific mechanisms you need.
+CAmkES interfaces from different components are connected by CAmkES `connectors`. CAmkES provides various connectors for communication (e.g., `seL4VirtQueues`) and shared memory (e.g., `seL4RPCDataport`) for different purposes. There are also connectors for specific types of servers (e.g., `seL4Ethdriver`). Some connectors (e.g., `seL4VMDTBPassthrough`), are even used as ways to hack the build system. In contrast, Microkit provides strictly minimum supports for memory mapping with *`memory regions`* and IPCs/notifications with *`channels`*. With Microkit, it is up to you to implement the specific mechanisms you need.
 
-With the help of *`memory regions`*, *`channels`* and potentially libraries that run on top of seL4CP (such as the [`libsharedringbuffer`][Lucy ShRingBuf] library), you might be able to implement similar features on seL4CP for most of the [standard `connectors`][std conn] and some of the [global `connectors`][glob conn].
+With the help of *`memory regions`*, *`channels`* and potentially libraries that run on top of Microkit (such as the [`libsharedringbuffer`][Lucy ShRingBuf] library), you might be able to implement similar features on Microkit for most of the [standard `connectors`][std conn] and some of the [global `connectors`][glob conn].
 
 An example of a global `connector` is `seL4RPCDataportSignal`, which combines a `dataport` and a seL4 notification object. The following example is a common use case of this connector:
 ```c
@@ -248,7 +248,7 @@ assembly {
 }
 ```
 
-On seL4CP, a similar functionality can be implemented thus:
+On Microkit, a similar functionality can be implemented thus:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -318,7 +318,7 @@ assembly {
 }
 ```
 
-This gives component `lwipserver` the ability to transmit data to component `ethdriver` by calling `ethdriver_tx`. On seL4CP, however, there are no built-in mechanisms for Ethernet drivers (or any other kind of drivers). What you might do instead, is to register *channels* for all methods you need:
+This gives component `lwipserver` the ability to transmit data to component `ethdriver` by calling `ethdriver_tx`. On Microkit, however, there are no built-in mechanisms for Ethernet drivers (or any other kind of drivers). What you might do instead, is to register *channels* for all methods you need:
 
 ```xml
 <system>
@@ -350,7 +350,7 @@ This gives component `lwipserver` the ability to transmit data to component `eth
 </system>
 ```
 
-And implement the mechanisms using `libsel4cp` functions and entry points in the application's code, e.g., for the driver:
+And implement the mechanisms using `libmicrokit` functions and entry points in the application's code, e.g., for the driver:
 
 ```c
 // in eth driver's PD
@@ -360,12 +360,12 @@ void eth_rx(void /* some cool parameters */)
 {
     // some cool driver code
 
-    // libsel4cp function
-    sel4cp_notify(0);
+    // libmicrokit function
+    microkit_notify(0);
 }
 
-// libsel4cp entry point
-void notified(sel4cp_channel channel_id)
+// libmicrokit entry point
+void notified(microkit_channel channel_id)
 {
     switch(channel_id) {
         case 1:
@@ -396,7 +396,7 @@ component Device {
 }
 ```
 
-seL4CP doesn't have an abstraction for hardware. To allow a *PD* to access a particular device, the physical memory of the device needs to be mapped into the *PD*. You may also need to register the IRQ for it.
+Microkit doesn't have an abstraction for hardware. To allow a *PD* to access a particular device, the physical memory of the device needs to be mapped into the *PD*. You may also need to register the IRQ for it.
 
 ```xml
 <system>
@@ -416,7 +416,7 @@ seL4CP doesn't have an abstraction for hardware. To allow a *PD* to access a par
 To handle the IRQ, add an entry in the handler for *channels*.
 
 ```c
-void notified(sel4cp_channel channel_id)
+void notified(microkit_channel channel_id)
 {
     switch(channel_id) {
         case 7:
@@ -434,7 +434,7 @@ void notified(sel4cp_channel channel_id)
 
 ## Build system {#build}
 
-seL4CP is build-system-agnostic, so setting up build flags as it is done on CAmkES using CMake is up to the build system you choose for your project.
+Microkit is build-system-agnostic, so setting up build flags as it is done on CAmkES using CMake is up to the build system you choose for your project.
 
 As we mentioned in [`attributes`, `configuration`](#attributes), CAmkES uses `attributes` that result in symbols being defined and available to the component code. For example, in CAmkES VMM development, `attributes` are used heavily for describing the layout of the whole system and the features of each VMM:
 
@@ -457,15 +457,15 @@ configuration {
 }
 ```
 
-seL4CP does not have a standard build system. In existing seL4CP example systems, most of these variables and structures are hard-coded. In addition, for parameters in the `.system` file, such as *channel* IDs and IRQs, it is up to you to ensure that they match those specified in the application's code. It would be possible to have external build tools as a solution in the future, but more use cases are needed to determine what seL4CP actually needs to provide.
+Microkit does not have a standard build system. In existing Microkit example systems, most of these variables and structures are hard-coded. In addition, for parameters in the `.system` file, such as *channel* IDs and IRQs, it is up to you to ensure that they match those specified in the application's code. It would be possible to have external build tools as a solution in the future, but more use cases are needed to determine what Microkit actually needs to provide.
 
-On CAmkES, you are also able to import components from other files or include header files for your `.camkes` file, which may not be necessary for seL4CP systems.
+On CAmkES, you are also able to import components from other files or include header files for your `.camkes` file, which may not be necessary for Microkit systems.
 
 ## Libraries
 
 ### Standard C library
 
-Standard C library functionality is available on CAmkES, but seL4CP does not enforce any particular C library, or even the use of C as an implementation language.
+Standard C library functionality is available on CAmkES, but Microkit does not enforce any particular C library, or even the use of C as an implementation language.
 
 ### Synchronization Primitives
 
@@ -477,15 +477,15 @@ int m_lock(void);
 /* Unlock mutex m */
 int m_unlock(void);
 ```
-which is not needed on seL4CP as *PDs* are single-threaded.
+which is not needed on Microkit as *PDs* are single-threaded.
 
-There are no built-in inter-component synchronisation primitives for either CAmkES or seL4CP as seL4 system calls are sufficient.
+There are no built-in inter-component synchronisation primitives for either CAmkES or Microkit as seL4 system calls are sufficient.
 
 ### Allocator
 
-CAmkES provides a [DMA allocator][dma alloc] to allocate and manage DMA buffers from a DMA pool, which is configured with the `dma_pool` attribute in CAmkES components. It also provides a [seL4 capability object allocator][obj alloc] that can be used to allocate seL4 capability objects from a managed pool. These tools are not available on seL4CP as one of its goals is to have capabilities known at *build* time.
+CAmkES provides a [DMA allocator][dma alloc] to allocate and manage DMA buffers from a DMA pool, which is configured with the `dma_pool` attribute in CAmkES components. It also provides a [seL4 capability object allocator][obj alloc] that can be used to allocate seL4 capability objects from a managed pool. These tools are not available on Microkit as one of its goals is to have capabilities known at *build* time.
 
-Dynamic memory allocation in CAmkES is done by standard C library functions, which manipulate a static array that has been set up by CAmkES. The size of the array can be configured with the `heap_size` attribute in CAmkES components. On seL4CP, you can configure a *`memory region`* for this purpose, but you will also need to implement any allocators you need (at least for now).
+Dynamic memory allocation in CAmkES is done by standard C library functions, which manipulate a static array that has been set up by CAmkES. The size of the array can be configured with the `heap_size` attribute in CAmkES components. On Microkit, you can configure a *`memory region`* for this purpose, but you will also need to implement any allocators you need (at least for now).
 
 ### Inter-component Transport Mechanisms {#sharedring}
 
@@ -588,13 +588,13 @@ The CAmkES VMM (distributed in various repositories, mainly [camkes-vm][camkesvm
 * VirtIO backends for networking, block devices, console and sockets.
 * Virtual GICv2 support.
 
-[seL4CP VMM][VMM] is an experimental VMM for 64-bit ARM platforms built on top of seL4CP. There are plans to improve the VMM, including x86 and RISC-V architecture support as well as VirtIO backends to make the seL4CP VMM more feature complete. These changes are currently in progress, we recommend you check the project's [README][VMM] to see the status as it progresses.
+[Microkit VMM][VMM] is an experimental VMM for 64-bit ARM platforms built on top of Microkit. There are plans to improve the VMM, including x86 and RISC-V architecture support as well as VirtIO backends to make the Microkit VMM more feature complete. These changes are currently in progress, we recommend you check the project's [README][VMM] to see the status as it progresses.
 
-seL4CP VMM is subject to change as it is a work-in-progress. This document will be updated to adapt to the changes, but this might not be done in a timely manner. Please always check [the seL4CP VMM manual][seL4CP VMM manual] for latest changes.
+Microkit VMM is subject to change as it is a work-in-progress. This document will be updated to adapt to the changes, but this might not be done in a timely manner. Please always check [the Microkit VMM manual][Microkit VMM manual] for latest changes.
 
-Both CAmkES VMM and seL4CP VMM support only one guest VM per instance of VMM. This is an intentional decision to maintain isolation between each VM/VMM.
+Both CAmkES VMM and Microkit VMM support only one guest VM per instance of VMM. This is an intentional decision to maintain isolation between each VM/VMM.
 
-While the seL4CP VMM is likley to change, the purpose of this example is to show the differences between similar non-trivial applications built on top of the both OS frameworks. This will also give you some idea of how to migrate existing CAmkES applications making use of virtual machines to seL4CP.
+While the Microkit VMM is likley to change, the purpose of this example is to show the differences between similar non-trivial applications built on top of the both OS frameworks. This will also give you some idea of how to migrate existing CAmkES applications making use of virtual machines to Microkit.
 
 ### VM component
 
@@ -629,18 +629,18 @@ A hack. Will be discussed in [Device Passthrough](#passthrough).
 ```c
     attribute int base_prio;
 ```
-Used by the CAmkES VMM for creating threads, N/A on seL4CP as it is single-threaded.
+Used by the CAmkES VMM for creating threads, N/A on Microkit as it is single-threaded.
 
 ```c
     attribute int num_vcpus = 1;
 ```
-The ability to config the number of vCPUs as an [attribute](#attributes) and handles multiple vCPUs in CAmkES VMM. seL4CP VMM doesn't currently handle multiple vCPUs, but the feature will be added in the future.
+The ability to config the number of vCPUs as an [attribute](#attributes) and handles multiple vCPUs in CAmkES VMM. Microkit VMM doesn't currently handle multiple vCPUs, but the feature will be added in the future.
 
 ```c
     attribute int num_extra_frame_caps;
     attribute int extra_frame_map_address;
 ```
-Attributes to initialise an allocator. N/A on seL4CP VMM because all memory is described in the system description at build time. The VMM does not manage the guest's virtual address space at runtime.
+Attributes to initialise an allocator. N/A on Microkit VMM because all memory is described in the system description at build time. The VMM does not manage the guest's virtual address space at runtime.
 
 ```c
     // 7. attributes to describe the VM guest
@@ -662,7 +662,7 @@ Attributes to initialise an allocator. N/A on seL4CP VMM because all memory is d
         string dtb_base_name = "";
     } linux_image_config;
 ```
-Attributes that describe the memory layout of the VM guest. On seL4CP, `linux_address_config` attributes are handled as *memory regions* that are mapped to the VM's virtual memory. `linux_image_config` attributes are not handled by seL4CP, however, some of the attributes (e.g., `linux_stdout` and `linux_bootcmdline`) are configurable in the VM's DTS file.
+Attributes that describe the memory layout of the VM guest. On Microkit, `linux_address_config` attributes are handled as *memory regions* that are mapped to the VM's virtual memory. `linux_image_config` attributes are not handled by Microkit, however, some of the attributes (e.g., `linux_stdout` and `linux_bootcmdline`) are configurable in the VM's DTS file.
 
 ```c
     // 8. serial connections layout
@@ -672,7 +672,7 @@ Attributes that describe the memory layout of the VM guest. On seL4CP, `linux_ad
     } serial_layout[] = [];
 }
 ```
-Serial connections layout. An optional attribute that configures the connections the VM likes to have for the serial multiplexor. This is currently N/A on seL4CP VMM, but there are plans for adding a serial driver and a serial multiplexor as external libraries on top of seL4CP.
+Serial connections layout. An optional attribute that configures the connections the VM likes to have for the serial multiplexor. This is currently N/A on Microkit VMM, but there are plans for adding a serial driver and a serial multiplexor as external libraries on top of Microkit.
 
 The standard CAmkES VM component also assumes the presence of other components, mainly server components:
 
@@ -690,9 +690,9 @@ assembly {
     // other stuff
 }
 ```
-VMM requires access to the actual hardware. CAmkES provides a file server, a serial server and a time server etc. for such purposes. On seL4CP, it's up to you to implement these functionalities, or potentially make use of the existing external libraries on top of seL4CP.
+VMM requires access to the actual hardware. CAmkES provides a file server, a serial server and a time server etc. for such purposes. On Microkit, it's up to you to implement these functionalities, or potentially make use of the existing external libraries on top of Microkit.
 
-The approach for VMM development on top of seL4CP is quite different. Most of the configuration is not done by seL4CP but by the seL4CP VMM and the external build system (that you provide). Take `vm_multi` as an example:
+The approach for VMM development on top of Microkit is quite different. Most of the configuration is not done by Microkit but by the Microkit VMM and the external build system (that you provide). Take `vm_multi` as an example:
 
 ```c
 
@@ -755,7 +755,7 @@ assembly {
 
 Most of the work here is done by the C preprocessor macros, these are all defined in [`vm.h`][the truth], and are concerned with specifying and configuring components that all VM(M)s need. We will not cover the details here, for more information on CAmkES VM components, see [CAmkES VMM tutorial][camkes VMM docs sort of]; for more information on virtqueues, see previous discussions in [Inter-component Transport Mechanisms](#sharedring).
 
-A similar VM system on top of seL4CP may look like this:
+A similar VM system on top of Microkit may look like this:
 
 ```xml
 
@@ -838,11 +838,11 @@ A similar VM system on top of seL4CP may look like this:
 </system>
 ```
 
-This VM system defines the necessary *memory regions* `guest_ram-#` for the VMs and maps them into the virtual memory of the VMs by creating a *`map`* in the *`virtual machine`* element of the VMMs' *protection domains*. It also sets up the connections between two VMMs, as well as shared memory regions for [Inter-component Transport Mechanisms](#sharedring) (which is done by `seL4VirtQueues` in the CAmkES example). Unlike CAmkES, as a minimal seL4 operating systems framework, seL4CP doesn't have a way to describe the properties of the VM guest. It's up to you to do the necessary configuration, e.g., `vswitch_layout` and `vswitch_mac_address`, for your seL4CP VM system.
+This VM system defines the necessary *memory regions* `guest_ram-#` for the VMs and maps them into the virtual memory of the VMs by creating a *`map`* in the *`virtual machine`* element of the VMMs' *protection domains*. It also sets up the connections between two VMMs, as well as shared memory regions for [Inter-component Transport Mechanisms](#sharedring) (which is done by `seL4VirtQueues` in the CAmkES example). Unlike CAmkES, as a minimal seL4 operating systems framework, Microkit doesn't have a way to describe the properties of the VM guest. It's up to you to do the necessary configuration, e.g., `vswitch_layout` and `vswitch_mac_address`, for your Microkit VM system.
 
-The examples are simplified for demonstration purposes, see the source code of [the CAmkES version][camkes VMM example] and [the seL4CP version][VMM demo] for details of the implementation.
+The examples are simplified for demonstration purposes, see the source code of [the CAmkES version][camkes VMM example] and [the Microkit version][VMM demo] for details of the implementation.
 
-For more details on the seL4CP VMM please see its [manual][seL4CP VMM manual].
+For more details on the Microkit VMM please see its [manual][Microkit VMM manual].
 
 ### Device Pass-through on 64-bit ARM platforms {#passthrough}
 
@@ -894,7 +894,7 @@ component VM vm;
 connection seL4VMDTBPassthrough vm_dtb(from vm.dtb_self, to vm.dtb);
 ```
 
-On seL4CP, device pass-through is done by mapping *memory regions* to the *virtual machine*:
+On Microkit, device pass-through is done by mapping *memory regions* to the *virtual machine*:
 
 ```xml
 
@@ -953,9 +953,9 @@ github.com/au-ts/sel4cp_vmm/blob/main/board/qemu_arm_virt_hyp/systems/simple.sys
 </system>
 ```
 
-## Future work on the seL4 Core Platform
+## Future work on Microkit
 
-The following is a (non-exhaustive) list of indented future additions to seL4CP:
+The following is a (non-exhaustive) list of indented future additions to Microkit:
 
 * Limited dynamic memory management.
     * There will still be a static amount of memory available, however there plans to allow for having a protection domain temporarily assign a memory region to its virtual address space. Note that there is still discussion to be had on this, the details are not finalised.
@@ -965,16 +965,16 @@ The following is a (non-exhaustive) list of indented future additions to seL4CP:
     * This will allow the use of the SMP kernel. For example you may want to pin certain PDs or VMs to certain CPU cores.
 * Other architecture support such as x86 and RISC-V.
 * Virtualisation support.
-    * As you can see from the examples in this guide, we have been experimenting with virtual machines on top of seL4CP. The changes necessary to do this are not yet mainlined, but should be in the near future.
+    * As you can see from the examples in this guide, we have been experimenting with virtual machines on top of Microkit. The changes necessary to do this are not yet mainlined, but should be in the near future.
 
-Note that some of these features have already been implemented and are currently in the process of being mainlined into seL4CP.
+Note that some of these features have already been implemented and are currently in the process of being mainlined into Microkit.
 
 ## Reference
-1. [seL4 Core Platform manual][seL4CP]
+1. [Microkit manual][Microkit]
 2. [CAmkES manual][camkes tut]
 3. [libsel4camkes manual][libsel4camkes] (the best version I can find)
 
-[seL4CP]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md
+[Microkit]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md
 [libsel4camkes]: https://github.com/seL4/camkes-tool/pull/82
 [camkes tut]: https://docs.sel4.systems/projects/camkes/manual.html
 [sDDF]: https://github.com/lucypa/sDDF/blob/main/echo_server/eth.system
@@ -991,9 +991,9 @@ Note that some of these features have already been implemented and are currently
 [vmmplatsupport]: https://github.com/seL4/seL4_projects_libs/tree/master/libsel4vmmplatsupport
 [libsel4vm]: https://github.com/seL4/seL4_projects_libs/tree/master/libsel4vm
 [VMM]: https://github.com/au-ts/sel4cp_vmm
-[seL4CP VMM manual]: https://github.com/au-ts/sel4cp_vmm/blob/main/docs/MANUAL.md
+[Microkit VMM manual]: https://github.com/au-ts/sel4cp_vmm/blob/main/docs/MANUAL.md
 [camkes VMM docs sort of]: https://docs.sel4.systems/Tutorials/camkes-vm-linux.html
 [the truth]: https://github.com/seL4/camkes-vm/blob/master/components/VM_Arm/configurations/vm.h
 [entry point]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#entry-points
-[libsel4cp]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#libsel4cp-libsel4cp
+[libmicrokit]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#libmicrokit-
 [scheduling]: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md#scheduling

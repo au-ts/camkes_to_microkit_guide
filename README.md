@@ -1,4 +1,4 @@
-This repository holds the guide for transitioning from CAmkES to the seL4 Core Platform. Written by Jade Zhou.
+This repository holds the guide for transitioning seL4 systems built using CAmkES to Microkit. Written by Jade Zhou.
 
 Any feedback is appreciated.
 
